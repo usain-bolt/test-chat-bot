@@ -3,14 +3,31 @@ from aiogram import Bot, Dispatcher, types, executor
 from keyboards import start_ikb, ikb_yes_no, ikb_yes_variants, ikb_no_variants
 from aiogram.types import InputFile
 from aiogram.dispatcher.filters import Text
-import os
+from aiogram.dispatcher import FSMContext
 from dotenv import load_dotenv, find_dotenv
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters.state import StatesGroup, State
+import os
+from validate_email import validate_email
+import phonenumbers
+from send_email import send_mail
+
 
 load_dotenv(find_dotenv())
 logging.basicConfig(level=logging.INFO)
 
+
+storage = MemoryStorage()
 bot = Bot(token=os.getenv("TOKEN_API"))
-dp = Dispatcher(bot=bot)
+dp = Dispatcher(bot=bot,
+                storage=storage)
+
+
+class FormAppointment(StatesGroup):
+    """"""
+    user_name = State()
+    user_email = State()
+    user_phone = State()
 
 
 async def on_startup(_):
@@ -55,28 +72,54 @@ async def click_yes(callback: types.CallbackQuery):
 async def click_yes(callback: types.CallbackQuery):
     await bot.send_message(chat_id=callback.message.chat.id,
                            reply_markup=ikb_no_variants,
-                           text="Вы хотите записаться на консультацию или пройти обследование?")
+                           text="Что Вы хотели бы узнать?")
 
 
-@dp.callback_query_handler(Text(equals="appointment"))
-async def appointment(callback: types.CallbackQuery):
-    await bot.send_message(chat_id=callback.message.chat.id,
-                           text="Написать нам в WhatsApp \n"
-                                "https://clck.ru/34GqM2",
-                           disable_web_page_preview=True)
+@dp.callback_query_handler(Text(equals="app_online"))
+async def send_name_question(callback: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(chat_id=callback.from_user.id,
+                           text="Напишите, пожалуйста, ФИО полностью")
+
+@dp.message_handler()
+async def enter_name(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['name'] = message.text
+    await message.answer("Укажите пожалуйста Вашу электронную почту?")
+    await FormAppointment.user_email.set()
+
+
+@dp.message_handler(state=FormAppointment.user_email)
+async def enter_email(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['email'] = message.text
+    # try:
+    #     e
+    await message.answer("Укажите Ваш контактный телефон?")
+    await FormAppointment.next()
+
+
+@dp.message_handler(state=FormAppointment.user_phone)
+async def enter_phone(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['phone'] = message.text
+
+    async with state.proxy() as data:
+        name = data.get('name')
+        email = data.get('email')
+        phone = data.get('phone')
+
+        send_mail(name, email, phone)
+
+    await message.answer("Благодарим за предоставленную информацию.\n"
+                         "Мы с Вами свяжемся")
+    await state.finish()
+
+
+@dp.callback_query_handler(Text(equals="app_online"))
+async def send_phone(callback: types.CallbackQuery):
     await bot.send_contact(chat_id=callback.message.chat.id,
                            phone_number="+7(843)231-20-90",
                            first_name="Регистратура Сихат РКБ")
-    await bot.send_message(chat_id=callback.message.chat.id,
-                           text="http://rkb-sihat.ru/",
-                           disable_web_page_preview=True)
-
-
-@dp.callback_query_handler(Text(equals="diagnostics"))
-async def click_on_diagnostics(callback: types.CallbackQuery):
-    await bot.send_message(chat_id=callback.message.chat.id,
-                           reply_markup=ikb_no_variants,
-                           text="Узнайте подробнее")
 
 
 @dp.callback_query_handler(Text(equals="phone"))
@@ -90,6 +133,12 @@ async def send_phone(callback: types.CallbackQuery):
 async def about_us(callback: types.CallbackQuery):
     await bot.send_message(chat_id=callback.message.chat.id,
                            text=ABOUT_US)
+
+
+@dp.callback_query_handler(Text(equals="telegram"))
+async def get_telegram(callback: types.CallbackQuery):
+    await bot.send_message(chat_id=callback.message.chat.id,
+                           text="@sihat_rch")
 
 
 if __name__ == "__main__":

@@ -14,8 +14,10 @@ start_ikb = InlineKeyboardMarkup(inline_keyboard=[
 
 
 ikb_yes_variants = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton('Записаться к специалисту', callback_data='appointment')],
-    [InlineKeyboardButton('Записаться на диагностику', callback_data='diagnostics')],
+    [InlineKeyboardButton('Записаться по телефону', callback_data='phone')],
+    [InlineKeyboardButton('Записаться online', callback_data='app_online')],
+    [InlineKeyboardButton('Написать Telegram', callback_data='telegram')],
+    [InlineKeyboardButton('Написать WhatsApp', url='https://clck.ru/34GqM2')],
 ])
 
 
