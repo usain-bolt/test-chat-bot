@@ -48,7 +48,7 @@ ABOUT_US = """Сихат РКБ  — подразделение платных �
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
     await bot.send_photo(chat_id=message.from_user.id,
-                         photo=InputFile("images/sihat.png"))
+                         photo=InputFile("data/images/sihat.png"))
     await bot.send_message(chat_id=message.from_user.id,
                            text=START_TEXT,
                            reply_markup=start_ikb)

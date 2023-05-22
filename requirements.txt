@@ -1,0 +1,5 @@
+aiogram==2.25.1
+data==0.4
+phonenumbers==8.13.11
+python-dotenv==1.0.0
+validate_email==1.3
